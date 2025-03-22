@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Article;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Session;
 
 class ArticleController extends Controller
 {
@@ -34,13 +36,29 @@ class ArticleController extends Controller
      */
     public function store(Request $request)
     {
-        $title = $request->title;
-        $content = $request->content;
-        Article::create([
-            "title" => $title,
-            "content" => $content
+        $validated = $request->validate([
+            'title' => 'required|unique:articles|max:255',
+            'content' => 'required',
+            'image' => 'required'
         ]);
-        return redirect()->route('articles.index');
+        if ($validated) {
+            $title = $request->title;
+            $content = $request->content;
+            $image = $request->file("image");
+            $path = null;
+            if ($image !== null) {
+                $path = Storage::putFile('images', $image);
+            }
+            Article::create([
+                "title" => $title,
+                "content" => $content,
+                "image_url" => $path
+            ]);
+            Session::flash('status', 'Article is added successfully!');
+            return redirect()->route('articles.index');    
+        } else {
+            return back()->withInput();
+        }
     }
 
     /**
@@ -72,13 +90,23 @@ class ArticleController extends Controller
      */
     public function update(Request $request, string $id)
     {
-        $title = $request->title;
-        $content = $request->content;
-        Article::where('id', $id)->update([
-            "title" => $title,
-            "content" => $content
+        $validated = $request->validate([
+            'title' => 'required|max:255',
+            'content' => 'required',
         ]);
-        return redirect()->route('articles.index');
+        if ($validated) {
+            $title = $request->title;
+            $content = $request->content;
+            Article::where('id', $id)->update([
+                "title" => $title,
+                "content" => $content
+            ]);
+            Session::flash('status', 'Article is edited successfully!');
+            return redirect()->route('articles.index');
+        } else {
+            return back()->withInput();
+        }
+        
     }
 
     /**
